@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Not-ify Music Player</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <style>
         body {
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
@@ -21,7 +22,8 @@
             background: rgba(0, 0, 0, 0.5);
             display: flex;
             align-items: center;
-            justify-content: center;
+            justify-content: space-between;
+            padding: 0 20px;
             font-size: 1.5em;
             font-weight: bold;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
@@ -40,6 +42,23 @@
             box-shadow: 2px 0 6px rgba(0, 0, 0, 0.2);
         }
 
+        .tabs {
+            display: flex;
+            margin-bottom: 10px;
+        }
+
+        .tab {
+            cursor: pointer;
+            margin-right: 10px;
+            padding: 10px;
+            border-bottom: 2px solid transparent;
+            transition: border-color 0.3s;
+        }
+
+        .tab.active {
+            border-bottom: 2px solid #fff;
+        }
+
         .music-library h2 {
             margin: 0;
             padding: 10px 0;
@@ -52,6 +71,9 @@
         }
 
         .music-library ul li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin: 10px 0;
             padding: 10px;
             border-radius: 5px;
@@ -63,6 +85,15 @@
         .music-library ul li:hover {
             background: rgba(255, 255, 255, 0.2);
             transform: scale(1.05);
+        }
+
+        .heart-icon {
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        .heart-icon:hover {
+            transform: scale(1.2);
         }
 
         .player {
@@ -89,6 +120,7 @@
             flex-direction: column;
             align-items: center;
             text-align: center;
+            position: relative;
         }
 
         .track-info img {
@@ -128,13 +160,31 @@
             width: 30px;
             height: 30px;
         }
+
+        .favorite-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        .favorite-button:hover {
+            transform: scale(1.2);
+        }
     </style>
 </head>
 <body>
-    <div class="top-bar">Not-ify Music Player</div>
+    <div class="top-bar">
+        Not-ify Music Player
+        <i id="player-favorite" class="favorite-button far fa-heart"></i>
+    </div>
     <div class="content">
         <div class="music-library">
-            <h2>Music Library</h2>
+            <div class="tabs">
+                <div id="tab-all" class="tab active">All Songs</div>
+                <div id="tab-favorites" class="tab">Favorites</div>
+            </div>
             <ul id="track-list"></ul>
         </div>
         <div class="player">
@@ -142,6 +192,7 @@
                 <img id="track-image" src="default-image.jpg" alt="Album Art">
                 <span id="track-title">Track Title</span>
                 <span id="track-artist">Track Artist</span>
+                <i id="track-favorite" class="favorite-button far fa-heart"></i>
             </div>
             <div class="player-controls">
                 <button id="prev"><img src="prev-icon.png" alt="Prev"></button>
@@ -155,6 +206,7 @@
         const audio = new Audio();
         let currentTrackIndex = 0;
         let tracks = [];
+        let favorites = JSON.parse(localStorage.getItem('favorites')) || [];
 
         // Fetch the list of tracks from the /music/ directory
         async function loadTracks() {
@@ -165,7 +217,7 @@
                 const html = parser.parseFromString(text, 'text/html');
                 const links = html.querySelectorAll('a');
 
-                links.forEach(link => {
+                for (const link of links) {
                     const href = link.getAttribute('href');
                     if (href.endsWith('.mp3') || href.endsWith('.wav') || href.endsWith('.m4a')) {
                         const track = {
@@ -174,9 +226,37 @@
                             artist: 'Unknown',
                             image: 'default-image.jpg' // Replace with actual image if available
                         };
+
+                        // Read metadata
+                        await new Promise((resolve, reject) => {
+                            jsmediatags.read(track.url, {
+                                onSuccess: function(tag) {
+                                    const { title, artist, picture } = tag.tags;
+                                    if (title) {
+                                        track.title = title;
+                                    }
+                                    if (artist) {
+                                        track.artist = artist;
+                                    }
+                                    if (picture) {
+                                        let base64String = "";
+                                        for (let i = 0; i < picture.data.length; i++) {
+                                            base64String += String.fromCharCode(picture.data[i]);
+                                        }
+                                        track.image = `data:${picture.format};base64,${window.btoa(base64String)}`;
+                                    }
+                                    resolve();
+                                },
+                                onError: function(error) {
+                                    console.error('Error reading tags', error);
+                                    resolve();
+                                }
+                            });
+                        });
+
                         tracks.push(track);
                     }
-                });
+                }
 
                 if (tracks.length > 0) {
                     loadTrack(currentTrackIndex);
@@ -190,16 +270,56 @@
         // Display the list of tracks in the music library
         function displayTrackList() {
             const trackList = document.getElementById('track-list');
-            tracks.forEach((track, index) => {
+            trackList.innerHTML = '';
+            const activeTab = document.querySelector('.tab.active').id;
+            const trackArray = activeTab === 'tab-favorites' ? favorites : tracks;
+
+            trackArray.forEach((track, index) => {
                 const listItem = document.createElement('li');
-                listItem.textContent = track.title;
+                listItem.textContent = `${track.title} - ${track.artist}`;
                 listItem.onclick = () => {
-                    currentTrackIndex = index;
+                    currentTrackIndex = tracks.indexOf(track);
                     loadTrack(currentTrackIndex);
                     audio.play();
                 };
+
+                const heartIcon = document.createElement('i');
+                heartIcon.className = isFavorite(track) ? 'heart-icon fas fa-heart' : 'heart-icon far fa-heart';
+                heartIcon.onclick = (e) => {
+                    e.stopPropagation();
+                    toggleFavorite(track);
+                };
+                listItem.appendChild(heartIcon);
                 trackList.appendChild(listItem);
             });
+        }
+
+        // Toggle favorite status of a track
+        function toggleFavorite(track) {
+            const index = favorites.findIndex(fav => fav.url === track.url);
+            if (index > -1) {
+                favorites.splice(index, 1);
+            } else {
+                favorites.push(track);
+            }
+            localStorage.setItem('favorites', JSON.stringify(favorites));
+            displayTrackList();
+            updateFavoriteIcons(track);
+        }
+
+        // Update favorite icons
+        function updateFavoriteIcons(track) {
+            const isFav = isFavorite(track);
+            const playerFavoriteIcon = document.getElementById('player-favorite');
+            const trackFavoriteIcon = document.getElementById('track-favorite');
+
+            playerFavoriteIcon.className = isFav ? 'favorite-button fas fa-heart' : 'favorite-button far fa-heart';
+            trackFavoriteIcon.className = isFav ? 'favorite-button fas fa-heart' : 'favorite-button far fa-heart';
+        }
+
+        // Check if a track is a favorite
+        function isFavorite(track) {
+            return favorites.some(fav => fav.url === track.url);
         }
 
         // Load a track by index
@@ -231,6 +351,8 @@
                     console.error('Error reading tags', error);
                 }
             });
+
+            updateFavoriteIcons(track);
         }
 
         // Play or pause the track
@@ -254,6 +376,19 @@
             currentTrackIndex = (currentTrackIndex + 1) % tracks.length;
             loadTrack(currentTrackIndex);
             audio.play();
+        });
+
+        // Switch between tabs
+        document.getElementById('tab-all').addEventListener('click', () => {
+            document.getElementById('tab-all').classList.add('active');
+            document.getElementById('tab-favorites').classList.remove('active');
+            displayTrackList();
+        });
+
+        document.getElementById('tab-favorites').addEventListener('click', () => {
+            document.getElementById('tab-all').classList.remove('active');
+            document.getElementById('tab-favorites').classList.add('active');
+            displayTrackList();
         });
 
         // Initialize the music player
