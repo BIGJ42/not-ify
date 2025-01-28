@@ -13,23 +13,24 @@
             display: flex;
             flex-direction: column;
             height: 100vh;
-            background-color: #e0f7fa;
-            color: #000;
+            background-color: var(--bg-color, #e0f7fa); /* Light blue background */
+            color: var(--text-color, #000); /* Default text color */
         }
         .top-bar {
-            background-color: #0288d1;
-            color: #fff;
+            background-color: var(--top-bar-color, #0288d1); /* Nicer blue color */
+            color: var(--top-bar-text-color, #fff); /* White text */
             padding: 10px;
             text-align: center;
+            position: relative;
         }
         .container {
             display: flex;
             flex: 1;
+            background-color: var(--container-bg-color, #03a9f4); /* Same blue color for entire section */
         }
         .music-library {
             width: 300px;
-            background-color: #03a9f4;
-            color: #fff;
+            color: var(--library-text-color, #fff); /* White text */
             overflow-y: auto;
             padding: 20px;
         }
@@ -37,6 +38,8 @@
             list-style: none;
             padding: 0;
             margin: 0;
+            overflow-y: auto; /* Enable scrollbar */
+            max-height: calc(100vh - 160px); /* Adjust height to show scrollbar */
         }
         .music-library li {
             padding: 10px;
@@ -55,11 +58,14 @@
             align-items: center;
             justify-content: center;
             padding: 40px;
-            background-color: #ffffff;
-            color: #000;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            background-color: var(--player-bg-color, #ffffff); /* White background for floating box */
+            color: var(--player-text-color, #000); /* Black text */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Adding shadow for floating effect */
             border-radius: 10px;
             margin: 20px;
+        }
+        .track-info {
+            text-align: center;
         }
         .track-info img {
             width: 200px;
@@ -67,6 +73,7 @@
             border-radius: 10px;
             margin-bottom: 20px;
             object-fit: cover;
+            background-color: #ccc;
         }
         .track-info span {
             display: block;
@@ -77,32 +84,83 @@
             gap: 20px;
             margin-top: 20px;
         }
-        .player-controls button {
+        .player-controls button, .player-controls select {
             padding: 10px;
             border: none;
-            background-color: #0288d1;
+            background-color: #0288d1; /* Nicer blue color */
             color: white;
             cursor: pointer;
             border-radius: 5px;
             font-size: 16px;
         }
-        .player-controls button:hover {
+        .player-controls button:hover, .player-controls select:hover {
+            background-color: #0277bd; /* Slightly darker blue on hover */
+        }
+        .load-songs-button {
+            margin-left: 10px;
+            padding: 5px 10px;
+            border: none;
+            background-color: #0288d1; /* Nicer blue color */
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .load-songs-button:hover {
+            background-color: #0277bd; /* Slightly darker blue on hover */
+        }
+        .theming-menu {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: var(--settings-bg-color, #fff);
+            color: var(--settings-text-color, #000);
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: none; /* Initially hidden */
+            z-index: 1000;
+        }
+        .theming-menu.active {
+            display: block; /* Show when active */
+        }
+        .theming-menu h3 {
+            margin: 0;
+            margin-bottom: 10px;
+        }
+        .theming-menu label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .close-button {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: #0288d1;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            padding: 5px;
+        }
+        .close-button:hover {
             background-color: #0277bd;
         }
     </style>
 </head>
 <body>
-    <div class="top-bar">Not-ify Music Player</div>
+    <div class="top-bar">
+        Not-ify Music Player
+        <button onclick="toggleThemingMenu()" style="float: right;">Theming</button>
+    </div>
     <div class="container">
         <div class="music-library">
-            <h2>All Songs</h2>
+            <h2>All Songs <button class="load-songs-button" onclick="loadTracks()">Load Songs</button></h2>
             <ul id="track-list"></ul>
-            <h2>Favorites</h2>
-            <ul id="favorites-list"></ul>
         </div>
         <div class="player">
             <div class="track-info">
-                <img id="track-image" src="https://via.placeholder.com/200" alt="Album Art">
+                <img id="track-image" src="https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/eb777e7a-7d3c-487e-865a-fc83920564a1/d7kpm65-437b2b46-06cd-4a86-9041-cc8c3737c6f0.jpg/v1/fill/w_800,h_800,q_75,strp/no_album_art__no_cover___placeholder_picture_by_cmdrobot_d7kpm65-fullview.jpg?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7ImhlaWdodCI6Ijw9ODAwIiwicGF0aCI6IlwvZlwvZWI3NzdlN2EtN2QzYy00ODdlLTg2NWEtZmM4MzkyMDU2NGExXC9kN2twbTY1LTQzN2IyYjQ2LTA2Y2QtNGE4Ni05MDQxLWNjOGMzNzM3YzZmMC5qcGciLCJ3aWR0aCI6Ijw9ODAwIn1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmltYWdlLm9wZXJhdGlvbnMiXX0.8yjX5CrFjxVH06LB59TpJLu6doZb0wz8fGQq4tM64mg?drive.google.com" alt="Album Art">
                 <span id="track-title">Track Title</span>
                 <span id="track-artist">Track Artist</span>
             </div>
@@ -110,123 +168,135 @@
                 <button id="prev"><i class="fas fa-backward"></i></button>
                 <button id="play"><i class="fas fa-play"></i></button>
                 <button id="next"><i class="fas fa-forward"></i></button>
+                <select id="playback-speed" onchange="changePlaybackSpeed()">
+                    <option value="0.5">0.5x</option>
+                    <option value="1" selected>1x</option>
+                    <option value="1.5">1.5x</option>
+                    <option value="2">2x</option>
+                </select>
             </div>
         </div>
+    </div>
+    <div class="theming-menu" id="theming-menu">
+        <button class="close-button" onclick="toggleThemingMenu()">Close</button>
+        <h3>Theming</h3>
+        <label for="bg-color">Background Color:</label>
+        <input type="color" id="bg-color" value="#e0f7fa" onchange="changeTheme()">
+        <label for="text-color">Text Color:</label>
+        <input type="color" id="text-color" value="#000000" onchange="changeTheme()">
+        <label for="top-bar-color">Top Bar Color:</label>
+        <input type="color" id="top-bar-color" value="#0288d1" onchange="changeTheme()">
+        <label for="top-bar-text-color">Top Bar Text Color:</label>
+        <input type="color" id="top-bar-text-color" value="#ffffff" onchange="changeTheme()">
+        <label for="player-bg-color">Player Background Color:</label>
+        <input type="color" id="player-bg-color" value="#ffffff" onchange="changeTheme()">
+        <label for="player-text-color">Player Text Color:</label>
+        <input type="color" id="player-text-color" value="#000000" onchange="changeTheme()">
     </div>
     <script>
         const audio = new Audio();
         let currentTrackIndex = 0;
-        let tracks = [
-            { title: "Song 1", artist: "Artist 1", url: "song1.mp3", image: "https://via.placeholder.com/200" },
-            { title: "Song 2", artist: "Artist 2", url: "song2.mp3", image: "https://via.placeholder.com/200" },
-            { title: "Song 3", artist: "Artist 3", url: "song3.mp3", image: "https://via.placeholder.com/200" }
-        ];
+        let tracks = [];
 
-        // Favorites system using localStorage
-        function getFavorites() {
-            return JSON.parse(localStorage.getItem("favorites")) || [];
-        }
+        // Placeholder image for tracks without cover art
+        const defaultImage = 'https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/eb777e7a-7d3c-487e-865a-fc83920564a1/d7kpm65-437b2b46-06cd-4a86-9041-cc8c3737c6f0.jpg/v1/fill/w_800,h_800,q_75,strp/no_album_art__no_cover___placeholder_picture_by_cmdrobot_d7kpm65-fullview.jpg?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7ImhlaWdodCI6Ijw9ODAwIiwicGF0aCI6IlwvZlwvZWI3NzdlN2EtN2QzYy00ODdlLTg2NWEtZmM4MzkyMDU2NGExXC9kN2twbTY1LTQzN2IyYjQ2LTA2Y2QtNGE4Ni05MDQxLWNjOGMzNzM3YzZmMC5qcGciLCJ3aWR0aCI6Ijw9ODAwIn1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmltYWdlLm9wZXJhdGlvbnMiXX0.8yjX5CrFjxVH06LB59TpJLu6doZb0wz8fGQq4tM64mg#drive.google.com';
 
-        function saveFavorites(favorites) {
-            localStorage.setItem("favorites", JSON.stringify(favorites));
-        }
+        // Fetch the list of tracks from the GitHub repository
+        async function loadTracks() {
+            try {
+                const response = await fetch('https://api.github.com/repos/BIGJ42/not-ify/contents/music#drive.google.com');
+                const data = await response.json();
 
-        function toggleFavorite(track) {
-            const favorites = getFavorites();
-            const index = favorites.findIndex(fav => fav.title === track.title);
-            if (index > -1) {
-                favorites.splice(index, 1); // Remove from favorites
-            } else {
-                favorites.push(track); // Add to favorites
+                tracks = data.filter(file => file.type === 'file' && (file.name.endsWith('.mp3') || file.name.endsWith('.wav') || file.name.endsWith('.m4a')))
+                             .map(file => ({
+                                 url: file.download_url,
+                                 title: file.name.replace(/\.(mp3|wav|m4a)$/, ''),
+                                 artist: 'Unknown',
+                                 image: defaultImage // Use provided cover art image by default
+                             }));
+
+                displayTrackList();
+                if (tracks.length > 0) {
+                    loadTrack(currentTrackIndex);
+                }
+            } catch (error) {
+                console.error('Error loading tracks:', error);
             }
-            saveFavorites(favorites);
-            displayFavorites();
         }
 
-        function isFavorite(track) {
-            return getFavorites().some(fav => fav.title === track.title);
-        }
-
-        // Display all tracks
+        // Display the list of tracks in the music library
         function displayTrackList() {
-            const trackList = document.getElementById("track-list");
-            trackList.innerHTML = "";
+            const trackList = document.getElementById('track-list');
+            trackList.innerHTML = '';
+
             tracks.forEach((track, index) => {
-                const listItem = document.createElement("li");
-                listItem.innerHTML = `
-                    ${track.title} - ${track.artist}
-                    <button onclick="toggleFavorite(tracks[${index}])">
-                        ${isFavorite(track) ? "★" : "☆"}
-                    </button>
-                `;
+                const listItem = document.createElement('li');
+                listItem.textContent = track.title;
                 listItem.onclick = () => {
                     currentTrackIndex = index;
-                    loadTrack(index);
+                    loadTrack(currentTrackIndex);
                     audio.play();
                 };
                 trackList.appendChild(listItem);
             });
         }
 
-        // Display favorites
-        function displayFavorites() {
-            const favoritesList = document.getElementById("favorites-list");
-            const favorites = getFavorites();
-            favoritesList.innerHTML = "";
-            favorites.forEach((track, index) => {
-                const listItem = document.createElement("li");
-                listItem.innerHTML = `
-                    ${track.title} - ${track.artist}
-                    <button onclick="toggleFavorite(tracks[${index}])">★</button>
-                `;
-                listItem.onclick = () => {
-                    const trackIndex = tracks.findIndex(t => t.title === track.title);
-                    if (trackIndex !== -1) {
-                        currentTrackIndex = trackIndex;
-                        loadTrack(trackIndex);
-                        audio.play();
-                    }
-                };
-                favoritesList.appendChild(listItem);
-            });
-        }
-
-        // Load track
+        // Load a track by index
         function loadTrack(index) {
             const track = tracks[index];
             audio.src = track.url;
-            document.getElementById("track-title").textContent = track.title;
-            document.getElementById("track-artist").textContent = track.artist;
-            document.getElementById("track-image").src = track.image;
+            document.getElementById('track-title').innerText = track.title;
+            document.getElementById('track-artist').innerText = track.artist;
+            document.getElementById('track-image').src = track.image;
+            document.getElementById('play').innerHTML = '<i class="fas fa-pause"></i>'; // Change play button to pause
         }
 
-        // Player controls
-        document.getElementById("play").onclick = () => {
+        // Play or pause the track
+        document.getElementById('play').addEventListener('click', () => {
             if (audio.paused) {
                 audio.play();
-                document.getElementById("play").innerHTML = '<i class="fas fa-pause"></i>';
+                document.getElementById('play').innerHTML = '<i class="fas fa-pause"></i>'; // Change play button to pause
             } else {
                 audio.pause();
-                document.getElementById("play").innerHTML = '<i class="fas fa-play"></i>';
+                document.getElementById('play').innerHTML = '<i class="fas fa-play"></i>'; // Change pause button to play
             }
-        };
+        });
 
-        document.getElementById("prev").onclick = () => {
+        // Play the previous track
+        document.getElementById('prev').addEventListener('click', () => {
             currentTrackIndex = (currentTrackIndex - 1 + tracks.length) % tracks.length;
             loadTrack(currentTrackIndex);
             audio.play();
-        };
+        });
 
-        document.getElementById("next").onclick = () => {
+        // Play the next track
+        document.getElementById('next').addEventListener('click', () => {
             currentTrackIndex = (currentTrackIndex + 1) % tracks.length;
             loadTrack(currentTrackIndex);
             audio.play();
-        };
+        });
 
-        // Initialize
-        displayTrackList();
-        displayFavorites();
-        if (tracks.length > 0) loadTrack(0);
+        // Change playback speed
+        function changePlaybackSpeed() {
+            const speed = document.getElementById('playback-speed').value;
+            audio.playbackRate = speed;
+        }
+
+        // Toggle theming menu
+        function toggleThemingMenu() {
+            const themingMenu = document.getElementById('theming-menu');
+            themingMenu.classList.toggle('active');
+        }
+
+        // Change theme based on settings
+        function changeTheme() {
+            document.documentElement.style.setProperty('--bg-color', document.getElementById('bg-color').value);
+            document.documentElement.style.setProperty('--text-color', document.getElementById('text-color').value);
+            document.documentElement.style.setProperty('--top-bar-color', document.getElementById('top-bar-color').value);
+            document.documentElement.style.setProperty('--top-bar-text-color', document.getElementById('top-bar-text-color').value);
+            document.documentElement.style.setProperty('--player-bg-color', document.getElementById('player-bg-color').value);
+            document.documentElement.style.setProperty('--player-text-color', document.getElementById('player-text-color').value);
+        }
     </script>
 </body>
 </html>
